@@ -11,7 +11,6 @@ def number_of_sequences(fasta_file):
     """
     return len(list(SeqIO.parse(fasta_file, "fasta")))
 #%%
-print(number_of_sequences("clades.fasta"))
 #%%
 def subsample_fasta(infile,outfile,target_count):
     """
@@ -24,7 +23,7 @@ def subsample_fasta(infile,outfile,target_count):
             if n % reduction_factor == 0:
                 SeqIO.write(record, outfile, "fasta-2line")
 #%%
-subsample_fasta("clades.fasta","clades_subsampled.fasta",50)
+subsample_fasta("input/clades.fasta","intermediary/clades_subsampled.fasta",15)
 #%%
 def subsequence_fasta(infile,outfile,start,end):
     """
@@ -32,10 +31,13 @@ def subsequence_fasta(infile,outfile,start,end):
     """
     with open(outfile, "w") as outfile:
         for record in SeqIO.parse(infile, "fasta"):
+            record.id = record.id + " subsequence " + str(start) + "_" + str(end)
+            record.name = ""
+            record.description = ""
             SeqIO.write(record[start:end], outfile, "fasta-2line")
 # %%
-subsequence_fasta("clades_subsampled.fasta","S.fasta",21500,26000)
-subsequence_fasta("clades_subsampled.fasta","ORF1a.fasta",200,14000)
+subsequence_fasta("intermediary/clades_subsampled.fasta","intermediary/S.fasta",21500,26000)
+subsequence_fasta("intermediary/clades_subsampled.fasta","intermediary/ORF1a.fasta",200,14000)
 #%%
 def sprinkle_N_stretches(infile,outfile,p_to_N, p_from_N):
     """
@@ -58,8 +60,36 @@ def sprinkle_N_stretches(infile,outfile,p_to_N, p_from_N):
                 else:
                     sequence_out += "N"
             record.seq = Seq(sequence_out)
+            record.id = record.id + " N stretches"
+            record.name = ""
+            record.description = ""
             SeqIO.write(record, outfile, "fasta-2line")
 
 # %%
 sprinkle_N_stretches("intermediary/S.fasta","intermediary/S_N.fasta",0.002,0.02)
+# %%
+def sprinkle_early_indels(infile,outfile,p_del,last_indel_pos):
+    with open(outfile, "w") as outfile:
+        for record in SeqIO.parse(infile, "fasta"):
+            sequence_in = str(record.seq)
+            sequence_out = ""
+            for pos,base in enumerate(sequence_in):
+                if pos < last_indel_pos:
+                    if random.random() > p_del:
+                        sequence_out += base
+                else:
+                    sequence_out += base
+            record.seq = Seq(sequence_out)
+            record.id = record.id + " early indels"
+            record.name = ""
+            record.description = ""
+            SeqIO.write(record, outfile, "fasta-2line")
+#%%
+sprinkle_early_indels("intermediary/ORF1a.fasta","intermediary/ORF1_early_indels.fasta",0.002,500)
+# %%
+import glob
+with open("output/all_sequences.fasta", "w") as outfile:
+    for file in glob.glob("intermediary/*.fasta"):
+        with open(file,"r") as infile:
+            outfile.write(infile.read())
 # %%
